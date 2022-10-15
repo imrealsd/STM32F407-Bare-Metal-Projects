@@ -28,8 +28,8 @@
 void SystemClock_Config(void);
 void key_action (char key);
 char get_keys_from_key_val(uint8_t key_val);
-void show_result_to_lcd(int32_t result, int32_t remainder);
-void convert_int_to_string(int32_t num,char *str, int8_t size);
+void show_result_to_lcd(int64_t result, int64_t remainder);
+void convert_int_to_string(int64_t num,char *str, int8_t size);
 
 int main(void)
 {	
@@ -122,7 +122,7 @@ void key_action (char key)
 	static int8_t multiplication_flag = 0;
 	static int8_t division_flag = 0;
 
-	static int32_t num1 = 0, num2 = 0, result = 0, remainder = 0;
+	static int64_t num1 = 0, num2 = 0, result = 0, remainder = 0;
 
 	if (key == '='){
 
@@ -182,7 +182,7 @@ void key_action (char key)
 
 }
 
-void show_result_to_lcd(int32_t result, int32_t remainder)
+void show_result_to_lcd(int64_t result, int64_t remainder)
 {
 	uint8_t negative_flag = 0;
 	char result_buff[8];
@@ -213,7 +213,7 @@ void show_result_to_lcd(int32_t result, int32_t remainder)
 }
 
 
-void convert_int_to_string(int32_t num,char *str, int8_t size)
+void convert_int_to_string(int64_t num,char *str, int8_t size)
 {
 
 	int8_t temp, index = 0;
