@@ -15,38 +15,158 @@
  *
  ******************************************************************************
  */
-/* USER CODE END Header */
+
+
+/* DESIGN FLOW*/
+
+/* SET TIME :
+ * press hour button to set hour -> press minute button to set minute -> Done
+ *
+ * CONFIG ALARM:
+ * press config alarm button -> press hour button -> press minute button -> press config alarm button -> Done
+ * 
+ * 
+ * ALARM ON / OFF:
+ * press alarm on/off button to toggle alarm status [on / off]
+*/
+
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "rtc.h"
 #include "gpio.h"
+#include "seven_segment.h"
 #include <stm32f407xx.h>
 
 void SystemClock_Config(void);
+void get_RTC_time (void);
+
+volatile uint8_t rtc_hour, rtc_min, alrm_hr, alrm_min;
+uint8_t config_alarm_flag = 0, alarm_status = 0;
 
 /**
  * @brief  The application entry point.
  * @retval int
  */
 int main(void)
-{
+{	
+	uint16_t combined_time = 0;
 
 	HAL_Init();
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_RTC_Init();
-
-	//HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
+	setup_seven_segment_gpio();
 
 	while (1){
 
+		get_RTC_time();
+		combined_time = (rtc_hour * 100) + rtc_min;
+		show_number(combined_time);
+
+		if (config_alarm_flag){
+			//setup_alarm_time ();  // yet to implement
+		}
 	}
 }
 
+
+void get_RTC_time (void)
+{	
+	RTC_TimeTypeDef t_Current = {0};
+	RTC_DateTypeDef d_Current = {0};
+	volatile int8_t bcd_min, bcd_hr;
+
+	if((HAL_RTC_GetTime(&hrtc,&t_Current,RTC_FORMAT_BCD) == HAL_OK) && 
+		(HAL_RTC_GetDate(&hrtc,&d_Current,RTC_FORMAT_BCD) == HAL_OK)){
+
+		/* BCD to DEC conversion */
+		bcd_hr = t_Current.Hours;
+		bcd_min = t_Current.Minutes;
+		rtc_hour = (((bcd_hr & 0xF0) >> 4) * 10) + (bcd_hr & 0x0F);
+		rtc_min = (((bcd_min & 0xF0) >> 4) * 10) + (bcd_min & 0x0F);
+	}
+}
+
+
+
 void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)	
 {	
-	HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_0);
+	/* GPIO_PIN_0 => set alarm button
+	 * GPIO_PIN_1 => Alarm on/off Button
+ 	* GPIO_PIN_2 => Hour Button [both for alarm and time]
+ 	* GPIO_PIN_3 => Minute Button [both for alarm and time]
+	*/
+
+	HAL_NVIC_DisableIRQ(EXTI0_IRQn);
+	HAL_NVIC_DisableIRQ(EXTI1_IRQn);
+	HAL_NVIC_DisableIRQ(EXTI2_IRQn);
+	HAL_NVIC_DisableIRQ(EXTI3_IRQn);
+
+
+	RTC_TimeTypeDef user_time = {0};
+	uint8_t temp_tim_hr = rtc_hour;
+	uint8_t temp_tim_mn = rtc_min;
+
+	switch (gpio_pin){
+	
+	case GPIO_PIN_0:
+		config_alarm_flag = 1;
+		break;
+
+	case GPIO_PIN_1:
+		alarm_status = (~(alarm_status)) & 0x01;
+		break;
+
+	case GPIO_PIN_2:
+		if (config_alarm_flag == 1){
+
+			alrm_hr++;
+
+		} else {
+			if (temp_tim_hr <= 22)
+				temp_tim_hr++;
+			else
+				temp_tim_hr = 0;
+
+			temp_tim_hr = ((temp_tim_hr / 10) << 4) | (temp_tim_hr % 10);
+			temp_tim_mn = ((temp_tim_mn / 10) << 4) | (temp_tim_mn % 10);
+
+			user_time.Hours = temp_tim_hr;
+			user_time.Minutes = temp_tim_mn;
+
+			HAL_RTC_SetTime(&hrtc,&user_time,RTC_FORMAT_BCD);
+		}
+		break;
+
+	case GPIO_PIN_3:
+		if (config_alarm_flag == 1){
+
+			alrm_min++;
+
+		} else {
+			if (temp_tim_mn <= 58)
+				temp_tim_mn++;
+			else 
+				temp_tim_mn = 0;
+
+			temp_tim_hr = ((temp_tim_hr / 10) << 4) | (temp_tim_hr % 10);
+			temp_tim_mn = ((temp_tim_mn / 10) << 4) | (temp_tim_mn % 10);
+
+			user_time.Hours = temp_tim_hr;
+			user_time.Minutes = temp_tim_mn;
+
+			HAL_RTC_SetTime(&hrtc,&user_time,RTC_FORMAT_BCD);
+		}
+		break;
+	}
+			
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+	HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+	HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+	HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 }
+
 
 
 /**
