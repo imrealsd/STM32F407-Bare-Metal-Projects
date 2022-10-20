@@ -16,33 +16,45 @@
  ******************************************************************************
  */
 
+/* Button Config*/
+
+	/* GPIO_PIN_0 => set alarm button
+	 * GPIO_PIN_1 => Alarm on/off Button
+ 	 * GPIO_PIN_2 => Hour Button [both for alarm and time]
+ 	 * GPIO_PIN_3 => Minute Button [both for alarm and time]
+	*/
 
 /* DESIGN FLOW*/
 
-/* SET TIME :
- * press hour button to set hour -> press minute button to set minute -> Done
- *
- * CONFIG ALARM:
- * press config alarm button -> press hour button -> press minute button -> press config alarm button -> Done
- * 
- * 
- * ALARM ON / OFF:
- * press alarm on/off button to toggle alarm status [on / off]
-*/
-
+	/* SET TIME :
+	* press hour button to set hour -> press minute button to set minute -> Done
+	*
+	* CONFIG ALARM:
+	* press config alarm button -> press hour button -> press minute button -> press config alarm button -> Done
+	* 
+	* 
+	* ALARM ON / OFF:
+	* press alarm on/off button to toggle alarm status [on / off]
+	*/
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "rtc.h"
 #include "gpio.h"
 #include "seven_segment.h"
+#include "millis.h"
 #include <stm32f407xx.h>
 
 void SystemClock_Config(void);
+void setup_alarm_time(void);
 void get_RTC_time (void);
+void check_alarm_matched(void);
+void show_alarm_status(void);
+
 
 volatile uint8_t rtc_hour, rtc_min, alrm_hr, alrm_min;
-uint8_t config_alarm_flag = 0, alarm_status = 0;
+uint8_t config_alarm_flag = 0, alarm_status = 0, alarm_staus_changed= 0;
+uint16_t abs_val(int16_t);
 
 /**
  * @brief  The application entry point.
@@ -50,26 +62,109 @@ uint8_t config_alarm_flag = 0, alarm_status = 0;
  */
 int main(void)
 {	
-	uint16_t combined_time = 0;
-
+	/*Initialise all drivers*/
 	HAL_Init();
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_RTC_Init();
 	setup_seven_segment_gpio();
+	start_millis();
+
+	/*variable for combinig hour and min and to show on display*/
+	uint16_t combined_time = 0;
 
 	while (1){
 
+		/* Read RTC chip , combine hour and min in single variable 
+		& show value to display*/
 		get_RTC_time();
 		combined_time = (rtc_hour * 100) + rtc_min;
 		show_number(combined_time);
 
-		if (config_alarm_flag){
-			//setup_alarm_time ();  // yet to implement
+		/*if alarm status is on check for alarm time matching*/
+		if (alarm_status)
+			check_alarm_matched();
+
+		/*if config alarm status is on , call alarm time set func */
+		if (config_alarm_flag)
+			setup_alarm_time();
+
+		/*if alarm status is changed [on->off or off->on] show status for one time 
+		then reset alarm_status_changed flag */
+		if (alarm_staus_changed){
+			show_alarm_status();
+			alarm_staus_changed = 0;
 		}
 	}
 }
 
+
+
+/**
+ * @brief  Show alarm status [ON / OFF]
+ * @retval None
+ */
+
+void show_alarm_status(void)
+{	
+	/*if alarm status is 1 show ON else show OFF*/
+	if (alarm_status)
+		for (volatile int32_t i = 0; i < 10000; i++)
+			show_ON();
+	else
+		for (volatile int32_t i = 0; i < 10000; i++)
+			show_OFF();
+}
+
+/**
+ * @brief  Check wheather the cuurent time and alarm time is same or not
+ * @retval None
+ */
+
+void check_alarm_matched(void)
+{	
+	/*varibale for toggling buzzer*/
+	static volatile uint16_t current = 0,last = 0;
+
+	/*check alarm time and current time is equal or not*/
+	if ((alrm_hr == rtc_hour) && (alrm_min == rtc_min)){
+
+		/* if alarm time matched: toggle alarm pin @ the interval of 500ms*/
+		current = millis();
+		if (abs_val(current - last) >= 500){
+
+			HAL_GPIO_TogglePin(GPIOE,GPIO_PIN_0);
+			last = current;
+		}
+	} 
+}
+
+
+/**
+ * @brief  Setup hour and min value for alarm
+ * @retval None
+ */
+
+void setup_alarm_time(void)
+{	
+	/* Reset alarm time*/
+	alrm_hr = 0;
+	alrm_min = 0;
+
+	/* unitl config_alarm button is pressed 2nd time, stay here & show alarm time*/
+	while (config_alarm_flag){
+
+		uint16_t combined_alarm_time = (alrm_hr * 100) + alrm_min;
+		show_number(combined_alarm_time);
+	}
+}
+
+
+
+/**
+ * @brief  Read RTC chip to update global variable [rtc_hr, rtc_min]
+ * @retval None
+ */
 
 void get_RTC_time (void)
 {	
@@ -77,27 +172,40 @@ void get_RTC_time (void)
 	RTC_DateTypeDef d_Current = {0};
 	volatile int8_t bcd_min, bcd_hr;
 
+	/*Read both time and date register of RTC , reading only 1 register will not work */
+
 	if((HAL_RTC_GetTime(&hrtc,&t_Current,RTC_FORMAT_BCD) == HAL_OK) && 
 		(HAL_RTC_GetDate(&hrtc,&d_Current,RTC_FORMAT_BCD) == HAL_OK)){
 
-		/* BCD to DEC conversion */
 		bcd_hr = t_Current.Hours;
 		bcd_min = t_Current.Minutes;
+
+		/* BCD to DEC conversion */
 		rtc_hour = (((bcd_hr & 0xF0) >> 4) * 10) + (bcd_hr & 0x0F);
 		rtc_min = (((bcd_min & 0xF0) >> 4) * 10) + (bcd_min & 0x0F);
 	}
 }
 
-
+/**
+ * @brief  Interrupt Handler Routine for 4 external interrupts
+ * @retval None
+ */
 
 void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)	
 {	
-	/* GPIO_PIN_0 => set alarm button
-	 * GPIO_PIN_1 => Alarm on/off Button
- 	* GPIO_PIN_2 => Hour Button [both for alarm and time]
- 	* GPIO_PIN_3 => Minute Button [both for alarm and time]
-	*/
 
+	/* Software Debouncing code:*/
+	static uint16_t current, last;
+	current = millis();
+
+	/* Accepting button press only if the time gap b/w 2 presses is more than 300ms*/
+	if (abs_val(current - last) <= 500)
+		return;
+	last = current;
+
+	/*-----------------------------*/
+
+	/* Disabling all interrupts*/
 	HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 	HAL_NVIC_DisableIRQ(EXTI1_IRQn);
 	HAL_NVIC_DisableIRQ(EXTI2_IRQn);
@@ -111,63 +219,102 @@ void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
 	switch (gpio_pin){
 	
 	case GPIO_PIN_0:
-		config_alarm_flag = 1;
+
+		/* Toggle config_alrm_flag */
+		config_alarm_flag = (~(config_alarm_flag)) & 0x01;
 		break;
 
 	case GPIO_PIN_1:
+
+		/* Toggle alarm status */
 		alarm_status = (~(alarm_status)) & 0x01;
+		/*set alarm_status_changed flag*/
+		alarm_staus_changed = 1;
+		/* Turn off alarm buzzer if alarm status is 0 */
+		if (alarm_status == 0)
+			HAL_GPIO_WritePin(GPIOE,GPIO_PIN_0, RESET);
 		break;
 
 	case GPIO_PIN_2:
+
+		/* if alarm config flag is set : change alarm time hour  , 
+		else: change normal time hour and update RTC with new time */
 		if (config_alarm_flag == 1){
 
-			alrm_hr++;
+			/*If alarm time hour value is <= 22 , increase otherwise reset to zero*/
+			if (alrm_hr <= 22)
+				alrm_hr++;
+			else
+				alrm_hr = 0;
 
 		} else {
+
+			/*If normal time hour value is <= 22 , increase otherwise reset to zero*/
 			if (temp_tim_hr <= 22)
 				temp_tim_hr++;
 			else
 				temp_tim_hr = 0;
 
+			/* Decimal to BCD conversion */
 			temp_tim_hr = ((temp_tim_hr / 10) << 4) | (temp_tim_hr % 10);
 			temp_tim_mn = ((temp_tim_mn / 10) << 4) | (temp_tim_mn % 10);
 
 			user_time.Hours = temp_tim_hr;
 			user_time.Minutes = temp_tim_mn;
 
+			/* update RTC with new minute value*/
 			HAL_RTC_SetTime(&hrtc,&user_time,RTC_FORMAT_BCD);
 		}
 		break;
 
 	case GPIO_PIN_3:
-		if (config_alarm_flag == 1){
 
-			alrm_min++;
+		/* if alarm config flag is set : change alarm time minute  , 
+		else: change normal time minute and update RTC with new time */
+		if (config_alarm_flag == 1){
+			
+			/*If alarm time min value is <= 58 , increase otherwise reset to zero*/
+			if (alrm_min <= 58)
+				alrm_min++;
+			else
+				alrm_min = 0;
 
 		} else {
+
+			/*If normal time min value is <= 58 , increase otherwise reset to zero*/
 			if (temp_tim_mn <= 58)
 				temp_tim_mn++;
 			else 
 				temp_tim_mn = 0;
 
+			/* Decimal to BCD conversion */
 			temp_tim_hr = ((temp_tim_hr / 10) << 4) | (temp_tim_hr % 10);
 			temp_tim_mn = ((temp_tim_mn / 10) << 4) | (temp_tim_mn % 10);
 
 			user_time.Hours = temp_tim_hr;
 			user_time.Minutes = temp_tim_mn;
 
+			/* update RTC with new minute value*/
 			HAL_RTC_SetTime(&hrtc,&user_time,RTC_FORMAT_BCD);
 		}
 		break;
 	}
-			
+
+	/* Enabling all interrupts*/		
 	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 	HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 	HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 	HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 }
 
-
+/**
+ * @brief for calculating absolute value
+ * @retval mod of passed number
+ */
+uint16_t abs_val(int16_t num)
+{
+	return (num > 0) ? num : -num;
+}
 
 /**
  * @brief System Clock Configuration
