@@ -55,26 +55,6 @@ void MX_GPIO_Init(void)
    * 3. Detect Falling edge
   */
 
-  /*
-          +5v
-            ^
-            |
-            |                       [RC LOW-PASS FILTER]
-        [Resistor]           :-------------------------------
-            |                :                              :
-            |                :                              :
-            -------------------[Resistor]---------------------> GPIO_PIN
-            |                :                    |         :
-            |                :               [Capacitor]    :
-            |                :                    |         :
-            |                :                    |         :
-          [Switch]           :                    |         :
-            |                :                    |         :
-            |                :                    |         :
-           GND               :-------------------GND---------
-  */
-
-
   /*Configure GPIO pins : PD0 PD1 PD2 PD3 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
