@@ -10,4 +10,6 @@ void count_upto_number (int16_t);
 void show_number(int16_t number);
 void wait (void);
 void delay (int32_t);
+void show_OFF(void);
+void show_ON(void);
 #endif

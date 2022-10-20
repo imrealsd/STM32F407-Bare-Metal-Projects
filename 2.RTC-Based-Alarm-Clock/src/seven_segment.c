@@ -146,3 +146,35 @@ void show_number(int16_t number)
     wait();
     GPIOC->ODR |= 0x000F;
 }
+
+void show_ON (void)
+{
+   
+    GPIOA->ODR = 0x00FF & 0x54;                           // data
+    GPIOC->ODR &= ~(1 << GPIO_ODR_OD1_Pos);               // enable digit
+    wait();
+    GPIOC->ODR |= 0x000F;                                 // disable digit
+
+    GPIOA->ODR = 0x00FF & 0x3F;                             // data
+    GPIOC->ODR &= ~(1 << GPIO_ODR_OD2_Pos);               // enable digit
+    wait();
+    GPIOC->ODR |= 0x000F;                                 // disable digit
+}
+
+void show_OFF (void)
+{   
+    GPIOA->ODR = 0x00FF & 0x71;                           // data
+    GPIOC->ODR &= ~(1 << GPIO_ODR_OD0_Pos);               // enable digit
+    wait();
+    GPIOC->ODR |= 0x000F;   
+
+    GPIOA->ODR = 0x00FF & 0x71;                           // data
+    GPIOC->ODR &= ~(1 << GPIO_ODR_OD1_Pos);               // enable digit
+    wait();
+    GPIOC->ODR |= 0x000F;                                 // disable digit
+
+    GPIOA->ODR = 0x00FF & 0x3F;                             // data
+    GPIOC->ODR &= ~(1 << GPIO_ODR_OD2_Pos);               // enable digit
+    wait();
+    GPIOC->ODR |= 0x000F;                                 // disable digit
+}
