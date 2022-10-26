@@ -10,7 +10,7 @@ void start_millis (void)
     /* Timer config */
     TIM7->CR1 &= ~(1 << TIM_CR1_UDIS_Pos);   // UEV enable for counter overflow/underflow
     TIM7->PSC = 167999;                       // counter clock freq = 84 Mhz/(167999+1) = = 500 hz
-                                             // [1 clk period = 1/2 mili sec] 
+                                             // [1 clk period = 2 mili sec] 
     TIM7->ARR = 0xFFFF;         
     TIM7->CNT = 0;
     TIM7->CR1 |= TIM_CR1_CEN;                        
