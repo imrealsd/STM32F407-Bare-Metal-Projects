@@ -43,32 +43,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
 
-  /*Configure GPIO pins : PA0 PA1 PA2 PA3
-                           PA4 PA5 */
+  /*Configure GPIO pins : PA0 PA1 PA2 PA3 PA4 PA5 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
 
