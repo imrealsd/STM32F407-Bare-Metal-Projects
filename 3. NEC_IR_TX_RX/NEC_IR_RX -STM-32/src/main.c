@@ -83,6 +83,11 @@ int main(void)
 }
 
 
+
+/**
+ * @brief  convert int to array.
+ * @retval none
+ */
 void int_to_arr(uint8_t arr[], uint32_t val, uint8_t size)
 {
 	int8_t index = size - 1;
@@ -100,6 +105,10 @@ void int_to_arr(uint8_t arr[], uint32_t val, uint8_t size)
 }
 
 
+/**
+ * @brief  EXTI handler routine
+ * @retval none
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
 {	
 	static volatile uint16_t current_time;
@@ -158,6 +167,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
 }
 
 
+/**
+ * @brief  Calculate absolute value.
+ * @retval int
+ */
 uint16_t abs_val(int16_t val)
 {
 	return (val > 0 ? val : -val);
