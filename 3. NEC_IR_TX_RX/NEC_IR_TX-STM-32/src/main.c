@@ -16,12 +16,31 @@
  ******************************************************************************
  */
 
+
+ /*IR Transmitter Board mislabeled: signal => +VCC , VCC => GND, GND => Signal
+  * 
+  */
+ /*NEC FRAME with respect to Time:
+  *
+  * [START OF FRAME]->[8BIT DEVICE ADDRESS]->[8BIT INVERSED DEVICE ADDRESS]->[8BIT CMD]->[8BIT INVERSE CMD]->[END OF FRAME]
+  *                   LSB               MSB   LSB                       MSB   LSB   MSB   LSB          MSB
+  *  0ms                                                                                                              67 ms
+  *  Time -->
+  */
+
+
 #include "main.h"
 #include "tim.h"
 #include "gpio.h"
 
 void SystemClock_Config(void);
 void send_IR_signal(uint32_t button_code);
+
+ /* Get 32bit code of each key from NEC_IR_RX Project
+ *
+ * 32bit data frame: [cmp_cmd]-[cmd]-[cmp_addr]-[addr] : will transmit this from LSB to MSB 
+ *                   MSB                           LSB
+ */
 
 uint32_t VOL_DOWN_DATA = 0b10001101011100101001101110001000;
 uint32_t VOL_UP_DATA   = 0b10001110011100011001101110001000;
@@ -30,43 +49,51 @@ uint32_t CH_DOWN_DATA  = 0b10001011011101001001101110001000;
 uint32_t POWER_DATA    = 0b11110100000010111001101110001000;
 uint32_t MUTE_DATA     = 0b11101000000101111001101110001000;
 
+
 /**
  * @brief  The application entry point.
  * @retval int
  */
 int main(void)
 {
-
+	/*initializing drivers*/
 	HAL_Init();
 	SystemClock_Config();
 	MX_GPIO_Init();
+	/*Timer 1 for generating PWM [38khz carrier signal]*/
 	MX_TIM1_Init();
+	/*Timer 6 for generating micro sec Delay*/
 	MX_TIM6_Init();
 
-	//send_IR_signal(VOL_DOWN_DATA);
 
 	while (1){
 
+	    /*PIN_0 : volume up Button*/
 		if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)){
 			HAL_Delay(200);
 			send_IR_signal(VOL_UP_DATA);
-
+		  
+		/*PIN_1 : volume down Button*/
 		} else if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_1)){
 			HAL_Delay(200);
 			send_IR_signal(VOL_DOWN_DATA);
 
+		/*PIN_2 : Channel up button*/
 		} else if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_2)){
 			HAL_Delay(200);
 			send_IR_signal(CH_UP_DATA);
 
+		/*PIN_3 : channel down button*/
 		} else if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)){
 			HAL_Delay(200);
 			send_IR_signal(CH_DOWN_DATA);
 
+		/*PIN_4 : Mute Button*/
 		} else if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_4)){
 			HAL_Delay(200);
 			send_IR_signal(MUTE_DATA);
 
+		/*PIN_5 : Power On/Off button*/
 		} else if (!HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)){
 			HAL_Delay(200);
 			send_IR_signal(POWER_DATA);
@@ -76,26 +103,32 @@ int main(void)
 
 
 
+/**
+ * @brief Send IR signal in NEC protocol
+ * @retval None
+ */
 void send_IR_signal(uint32_t button_code)
 {
 	volatile int len = 0;
 
-	/* SOF */
+	/* SOF : 9ms pulse brust 4.5 ms wait state*/
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	Delay_Micros(9000);
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 	Delay_Micros(4500);
 
-	/* 32 bit data frame [adddress + cmp_address + command + cmp_cmooamd] */
+	/* 32 bit data frame */
 	while (len <=  31){
 
+		/*For 1's : 563 us pulse brust, 1690 us wait state*/
 		if (button_code & (1 << len)){
 		
 			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 			Delay_Micros(563);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 			Delay_Micros(1690);
-		
+
+		/*For 0's : 563 us pulse brust, 563 us wait state*/
 		} else {
 
 			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -106,7 +139,7 @@ void send_IR_signal(uint32_t button_code)
 		len++;
 	}
 	
-	/*EOF*/
+	/*EOF: 563 ms pulse brust*/
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	Delay_Micros(563);
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
