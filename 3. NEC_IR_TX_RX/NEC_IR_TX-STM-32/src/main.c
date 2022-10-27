@@ -17,7 +17,7 @@
  */
 
 
- /*IR Transmitter Board mislabeled: signal => +VCC , VCC => GND, GND => Signal
+ /*IR Transmitter Board connection: signal_pin => PE9[ext pull down] , Neutral_pin => GND, GND_pin => GND
   * 
   */
  /*NEC FRAME with respect to Time:
