@@ -21,6 +21,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+ /*IR Reciever Board connection: signal_pin => PA1 , VCC_pin => +VCC, GND_pin => GND */
+
 #include "main.h"
 #include "tim.h"
 #include "usart.h"
