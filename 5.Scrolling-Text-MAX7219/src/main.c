@@ -23,9 +23,9 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void send_max7219(uint8_t addr, uint8_t data);
-void clear_max7219(void);
-void init_max7219(void);
+void Max7219_Send(uint8_t addr, uint8_t data);
+void Max7219_Clear(void);
+void Max7219_Init(void);
 
 /**
  * @brief  The application entry point.
@@ -38,17 +38,17 @@ int main(void)
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_SPI1_Init();
-	init_max7219();
+	Max7219_Init();
 
-	send_max7219(0x01,0x0F);
-	send_max7219(0x08,0xF0);
+	Max7219_Send(0x01,0x0F);
+	Max7219_Send(0x08,0xF0);
 	while (1){}
 }
 
 
-void send_max7219(uint8_t addr, uint8_t data)
+void Max7219_Send(uint8_t addr, uint8_t data)
 {	
-	/*send data 2x8 bit = 16 bit data at a time, acc. to max7219 datasheet*/
+	/*send 2x8 bit = 16 bit data at a time, acc. to max7219 datasheet*/
 	uint8_t tx_buff[2] = {addr,data};
 	uint8_t rx_buff[2];
 
@@ -57,23 +57,23 @@ void send_max7219(uint8_t addr, uint8_t data)
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 }
 
-void clear_max7219(void)
+void Max7219_Clear(void)
 {
 	for (uint8_t i = 0; i <= 7; i++)
-	send_max7219((1+i),0x00);
+		Max7219_Send((1+i),0x00);
 }
 
 
-void init_max7219(void)
+void Max7219_Init(void)
 {
 	uint8_t init_data[8] = {0x09,0x00,0x0B,0x07,0x0C,0x01,0x0A,0x0F};
 
-	send_max7219(init_data[0], init_data[1]);
-	send_max7219(init_data[2], init_data[3]);
-	send_max7219(init_data[4], init_data[5]);
-	send_max7219(init_data[6], init_data[7]);
+	Max7219_Send(init_data[0], init_data[1]);
+	Max7219_Send(init_data[2], init_data[3]);
+	Max7219_Send(init_data[4], init_data[5]);
+	Max7219_Send(init_data[6], init_data[7]);
 
-	clear_max7219();
+	Max7219_Clear();
 }
 
 
