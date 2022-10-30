@@ -20,12 +20,23 @@
 #include "main.h"
 #include "spi.h"
 #include "gpio.h"
+#include <string.h>
+#define SCROLL_DELAY 80
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void Max7219_Send(uint8_t addr, uint8_t data);
 void Max7219_Clear(void);
 void Max7219_Init(void);
+void Max7219_Scroll_Letter(char ch);
+void Max7219_Scroll_Text(char *str);
+
+uint8_t letters[26][8] = {{0x3C,0x7E,0x66,0x7E,0x7E,0x66,0x66,0x66},    // A
+						  {0x7C,0X7E,0X66,0X7C,0X7C,0X66,0X7E,0X7C},    // B
+						  {0x3C,0x7C,0xC0,0xC0,0xC0,0xC0,0x7C,0x3C},    // C
+						  {0x7C,0x7E,0x66,0x66,0x66,0x66,0x7E,0X7C},    // D
+						  {0x7C,0x7C,0x60,0x7C,0x7C,0x60,0x7C,0x7C},    // E
+						  {0x7C,0x7C,0x60,0x7C,0x7C,0x60,0x60,0x60}};   // F
 
 /**
  * @brief  The application entry point.
@@ -33,19 +44,60 @@ void Max7219_Init(void);
  */
 int main(void)
 {
-
 	HAL_Init();
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_SPI1_Init();
 	Max7219_Init();
 
-	Max7219_Send(0x01,0x0F);
-	Max7219_Send(0x08,0xF0);
-	while (1){}
+	while (1){
+		Max7219_Scroll_Text("ABCDEF");
+	}
 }
 
 
+/**
+ * @brief  Scroll entire text/string.
+ * @retval none
+ */
+void Max7219_Scroll_Text(char *str)
+{	
+	int8_t size = strlen(str);
+
+	for (int8_t i = 0 ; i < size; i++){
+		Max7219_Scroll_Letter(str[i]);
+	}
+}
+
+
+/**
+ * @brief  Scroll one letter.
+ * @retval none
+ */
+void Max7219_Scroll_Letter(char ch)
+{	
+	int8_t letter_index = ch - 65, matrix_row, shift_val;
+	volatile uint16_t frame = 0;
+	//uint8_t matrix_row, shift_val;
+
+
+	for (shift_val = 0; shift_val < 16; shift_val++){          /* For left to right shift*/
+		
+		for (matrix_row = 0; matrix_row < 8; matrix_row++){     /*for writing 8 marix rows*/
+
+			frame = letters[letter_index][matrix_row] << shift_val;
+			frame = frame >> 8;
+			Max7219_Send(0x1+matrix_row,(uint8_t)frame);
+		}
+		HAL_Delay(SCROLL_DELAY);
+	}
+}
+
+
+/**
+ * @brief  Send data fro one row.
+ * @retval none
+ */
 void Max7219_Send(uint8_t addr, uint8_t data)
 {	
 	/*send 2x8 bit = 16 bit data at a time, acc. to max7219 datasheet*/
@@ -57,6 +109,10 @@ void Max7219_Send(uint8_t addr, uint8_t data)
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 }
 
+/**
+ * @brief  Clear led screen.
+ * @retval none
+ */
 void Max7219_Clear(void)
 {
 	for (uint8_t i = 0; i <= 7; i++)
@@ -64,6 +120,10 @@ void Max7219_Clear(void)
 }
 
 
+/**
+ * @brief  Initialize led screen.
+ * @retval none
+ */
 void Max7219_Init(void)
 {
 	uint8_t init_data[8] = {0x09,0x00,0x0B,0x07,0x0C,0x01,0x0A,0x0F};
