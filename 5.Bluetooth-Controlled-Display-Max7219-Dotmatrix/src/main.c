@@ -1,0 +1,219 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2022 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "spi.h"
+#include "gpio.h"
+#include <string.h>
+#define SCROLL_DELAY 80
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+void Max7219_Send(uint8_t addr, uint8_t data);
+void Max7219_Clear(void);
+void Max7219_Init(void);
+void Max7219_Scroll_Letter(char ch);
+void Max7219_Scroll_Text(char *str);
+
+uint8_t letters[26][8] = {{0x3C,0x7E,0x66,0x7E,0x7E,0x66,0x66,0x66},    // A
+						  {0x7C,0X7E,0X66,0X7C,0X7C,0X66,0X7E,0X7C},    // B
+						  {0x3C,0x7C,0xC0,0xC0,0xC0,0xC0,0x7C,0x3C},    // C
+						  {0x7C,0x7E,0x66,0x66,0x66,0x66,0x7E,0X7C},    // D
+						  {0x7C,0x7C,0x60,0x7C,0x7C,0x60,0x7C,0x7C},    // E
+						  {0x7C,0x7C,0x60,0x7C,0x7C,0x60,0x60,0x60}};   // F
+
+/**
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void)
+{
+	HAL_Init();
+	SystemClock_Config();
+	MX_GPIO_Init();
+	MX_SPI1_Init();
+	Max7219_Init();
+
+	while (1){
+		Max7219_Scroll_Text("ABCDEF");
+	}
+}
+
+
+/**
+ * @brief  Scroll entire text/string.
+ * @retval none
+ */
+void Max7219_Scroll_Text(char *str)
+{	
+	int8_t size = strlen(str);
+
+	for (int8_t i = 0 ; i < size; i++){
+		Max7219_Scroll_Letter(str[i]);
+	}
+}
+
+
+/**
+ * @brief  Scroll one letter.
+ * @retval none
+ */
+void Max7219_Scroll_Letter(char ch)
+{	
+	int8_t letter_index = ch - 65, matrix_row, shift_val;
+	volatile uint16_t frame = 0;
+	//uint8_t matrix_row, shift_val;
+
+
+	for (shift_val = 0; shift_val < 16; shift_val++){          /* For left to right shift*/
+		
+		for (matrix_row = 0; matrix_row < 8; matrix_row++){     /*for writing 8 marix rows*/
+
+			frame = letters[letter_index][matrix_row] << shift_val;
+			frame = frame >> 8;
+			Max7219_Send(0x1+matrix_row,(uint8_t)frame);
+		}
+		HAL_Delay(SCROLL_DELAY);
+	}
+}
+
+
+/**
+ * @brief  Send data fro one row.
+ * @retval none
+ */
+void Max7219_Send(uint8_t addr, uint8_t data)
+{	
+	/*send 2x8 bit = 16 bit data at a time, acc. to max7219 datasheet*/
+	uint8_t tx_buff[2] = {addr,data};
+	uint8_t rx_buff[2];
+
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+	HAL_SPI_TransmitReceive(&hspi1,(uint8_t*)tx_buff,(uint8_t*)rx_buff,2,100);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
+}
+
+/**
+ * @brief  Clear led screen.
+ * @retval none
+ */
+void Max7219_Clear(void)
+{
+	for (uint8_t i = 0; i <= 7; i++)
+		Max7219_Send((1+i),0x00);
+}
+
+
+/**
+ * @brief  Initialize led screen.
+ * @retval none
+ */
+void Max7219_Init(void)
+{
+	uint8_t init_data[8] = {0x09,0x00,0x0B,0x07,0x0C,0x01,0x0A,0x0F};
+
+	Max7219_Send(init_data[0], init_data[1]);
+	Max7219_Send(init_data[2], init_data[3]);
+	Max7219_Send(init_data[4], init_data[5]);
+	Max7219_Send(init_data[6], init_data[7]);
+
+	Max7219_Clear();
+}
+
+
+/**
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void)
+{
+	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+	/** Configure the main internal regulator output voltage
+	 */
+	__HAL_RCC_PWR_CLK_ENABLE();
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	RCC_OscInitStruct.PLL.PLLM = 8;
+	RCC_OscInitStruct.PLL.PLLN = 168;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
+
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */
+
+/**
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void)
+{
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
+	/* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef USE_FULL_ASSERT
+/**
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+	/* USER CODE BEGIN 6 */
+	/* User can add his own implementation to report the file name and line number,
+	   ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+	/* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
