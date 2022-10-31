@@ -43,7 +43,7 @@ int main(void)
 	while (1){
 
 		HAL_Delay(2000);
-		Max7219_Scroll_Text("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+		Max7219_Scroll_Text("HELLO MAX7219");
 	}
 }
 
