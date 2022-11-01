@@ -56,14 +56,16 @@ int main(void)
 		/* If total buffer is received update msg string */
 		if (received_complete){
 			
-			/*reset msg*/
-			reset(msg);
 			/*copy rx_buff to msg*/
 			for (volatile int8_t i = 0; i < MSG_BUFF_SIZE; i++)
 				msg[i] = rx_buff[i];
 
 			received_complete = 0;
 			reset(rx_buff);
+
+			/*Clear screen if received msg is "CLEAR" */
+			if (msg[0] == 'C' && msg[1] == 'L' && msg[2] == 'E' && msg[3] == 'A' && msg[4] == 'R')
+				reset(msg);
 		}
 		/*scroll msg*/
 		Max7219_Scroll_Text((char*)msg);
