@@ -20,13 +20,20 @@
 
 #include "main.h"
 #include "spi.h"
+#include "usart.h"
 #include "gpio.h"
 #include "Max7219.h"
+#include <stm32f407xx.h>
+
+#define MSG_BUFF_SIZE 5
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void reset (uint8_t *buff);
 
-	
+uint8_t rx_buff[MSG_BUFF_SIZE], msg[MSG_BUFF_SIZE];
+volatile int8_t received_complete = 0;
+
 /**
  * @brief  The application entry point.
  * @retval int
@@ -38,16 +45,54 @@ int main(void)
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_SPI1_Init();
+	MX_USART1_UART_Init();
 	Max7219_Init();
+
+	/*Setup interrupt to receive MSG_BUFF_SIZE bytes*/
+	HAL_UART_Receive_IT(&huart1,rx_buff,MSG_BUFF_SIZE);
 
 	while (1){
 
-		HAL_Delay(2000);
-		Max7219_Scroll_Text("HELLO MAX7219");
+		/* If total buffer is received update msg string */
+		if (received_complete){
+			
+			/*reset msg*/
+			reset(msg);
+			/*copy rx_buff to msg*/
+			for (volatile int8_t i = 0; i < MSG_BUFF_SIZE; i++)
+				msg[i] = rx_buff[i];
+
+			received_complete = 0;
+			reset(rx_buff);
+		}
+		/*scroll msg*/
+		Max7219_Scroll_Text((char*)msg);
 	}
 }
 
 
+/**
+ * @brief  RX complete callback
+ * @retval None
+ */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{	
+	/* This function will be called ater MSG_BUFF_SIZE bytes receive is completed
+	 * after receiving MSG_BUFF_SIZE bytes , setup for another MSG_BUFF_SIZE bytes reception
+	*/
+	HAL_UART_Receive_IT(&huart1,rx_buff,MSG_BUFF_SIZE);
+	received_complete = 1;
+}
+
+/**
+ * @brief  reset buffer
+ * @retval None
+ */
+void reset (uint8_t *buff)
+{
+	for (volatile int8_t i = 0; i < MSG_BUFF_SIZE; i++)
+		buff[i] = 0;
+}
 
 /**
  * @brief System Clock Configuration
