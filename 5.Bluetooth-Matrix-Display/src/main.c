@@ -22,7 +22,7 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-#include "Max7219.h"
+#include "max7219_graphics.h"
 #include <stm32f407xx.h>
 
 #define MSG_BUFF_SIZE 5
