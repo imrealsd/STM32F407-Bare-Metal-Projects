@@ -51,11 +51,18 @@ int main(void)
 
 		temparature = Get_Temparature();
 		Send_To_Serial_Monitor();
+		HAL_Delay(1000);
 	}
-	
+
 	return 0;
 }
 
+
+
+/**
+ * @brief  Get temparature 
+ * @retval float
+ */
 static float Get_Temparature(void)
 {
 	uint16_t raw_adc = HAL_ADC_GetValue(&hadc1);
@@ -76,6 +83,10 @@ static float Get_Temparature(void)
 }
 
 
+/**
+ * @brief Sending temparature data to Serial Monitor 
+ * @retval None
+ */
 void Send_To_Serial_Monitor (void)
 {   
 	uint8_t tx_buff[BUFF_SIZE];
