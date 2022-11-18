@@ -23,14 +23,14 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-
 #define BUFF_SIZE 8
 
+/*Local Function Prototypes*/
 void SystemClock_Config(void);
 static float Get_Temparature(void);
 void Send_To_Serial_Monitor (void);
 
-
+/*Global Variables*/
 float temparature =  0;
 
 /**
@@ -38,7 +38,8 @@ float temparature =  0;
  * @retval int
  */
 int main(void)
-{
+{	
+	/*initialize drivers*/
 	HAL_Init();
 	SystemClock_Config();
 	MX_GPIO_Init();
@@ -47,13 +48,17 @@ int main(void)
 	MX_SPI1_Init();
 	MX_USART1_UART_Init();
 
+	/**
+	 * Get temparature
+	 * Send To Serial Monitor
+	 * Delay & Repeat
+	 */
 	while (1){
 
 		temparature = Get_Temparature();
 		Send_To_Serial_Monitor();
 		HAL_Delay(1000);
 	}
-
 	return 0;
 }
 
@@ -101,6 +106,7 @@ void Send_To_Serial_Monitor (void)
     int8_t d2 = ((int)temparature / 10) % 10;
     int8_t d1 = (int)temparature % 10;
 
+	/*load data into tx-buff*/
 	tx_buff[0] = d5 + 48;
 	tx_buff[1] = d4 + 48;
 	tx_buff[2] = d3 + 48;
@@ -110,6 +116,7 @@ void Send_To_Serial_Monitor (void)
 	tx_buff[6] = 'C';
 	tx_buff[7] = '\n';
 
+	/*send tx-buff to pc*/
 	HAL_UART_Transmit(&huart1, tx_buff, BUFF_SIZE, 100);
 }
 
