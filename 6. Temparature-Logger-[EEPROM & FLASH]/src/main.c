@@ -28,7 +28,7 @@
 /*Local Function Prototypes*/
 void SystemClock_Config(void);
 static float Get_Temparature(void);
-void Send_To_Serial_Monitor (void);
+void Send_To_Serial_Monitor (float);
 
 /*Global Variables*/
 float temparature =  0;
@@ -50,14 +50,19 @@ int main(void)
 
 	/**
 	 * Get temparature
+	 * Save to EEPROM & FLASH
 	 * Send To Serial Monitor
-	 * Delay & Repeat
+	 * Delay & Repeat after 60s
 	 */
 	while (1){
 
 		temparature = Get_Temparature();
-		Send_To_Serial_Monitor();
-		HAL_Delay(1000);
+
+		Write_To_I2C_EEPROM(temparature);
+		Write_To_SPI_FLASH(temparature);
+		Send_To_Serial_Monitor(temparature);
+
+		HAL_Delay(60000);
 	}
 	return 0;
 }
@@ -92,19 +97,19 @@ static float Get_Temparature(void)
  * @brief Sending temparature data to Serial Monitor 
  * @retval None
  */
-void Send_To_Serial_Monitor (void)
+void Send_To_Serial_Monitor (float value)
 {   
 	uint8_t tx_buff[BUFF_SIZE];
-    temparature = temparature * 100;
+    value = value * 100;
 
     /* Before point [3 digits] */
-    int8_t d5 = (((int)temparature) / 10000) % 10;
-    int8_t d4 = (((int)temparature) / 1000) % 10;
-    int8_t d3 = (((int)temparature) / 100) % 10;
+    int8_t d5 = (((int)value) / 10000) % 10;
+    int8_t d4 = (((int)value) / 1000) % 10;
+    int8_t d3 = (((int)value) / 100) % 10;
 
     /* After point 2 digits */
-    int8_t d2 = ((int)temparature / 10) % 10;
-    int8_t d1 = (int)temparature % 10;
+    int8_t d2 = ((int)value / 10) % 10;
+    int8_t d1 = (int)value % 10;
 
 	/*load data into tx-buff*/
 	tx_buff[0] = d5 + 48;
@@ -118,6 +123,28 @@ void Send_To_Serial_Monitor (void)
 
 	/*send tx-buff to pc*/
 	HAL_UART_Transmit(&huart1, tx_buff, BUFF_SIZE, 100);
+}
+
+
+
+/**
+ * @brief  Writing temparature data to EEPROM 
+ * @retval None
+ */
+void Write_To_I2C_EEPROM(float value)
+{
+
+}
+
+
+
+/**
+ * @brief  Writing temparature data to FLASH
+ * @retval None
+ */
+void Write_To_SPI_FLASH(float value)
+{
+
 }
 
 
