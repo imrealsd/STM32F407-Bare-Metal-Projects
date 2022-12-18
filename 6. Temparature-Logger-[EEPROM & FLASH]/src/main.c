@@ -24,6 +24,7 @@
 #include "usart.h"
 #include "gpio.h"
 #define BUFF_SIZE 8
+#define EEPROM_I2C_ADDRESS 0x50
 
 /*Local Function Prototypes*/
 void SystemClock_Config(void);
@@ -57,11 +58,9 @@ int main(void)
 	while (1){
 
 		temparature = Get_Temparature();
-
 		Write_To_I2C_EEPROM(temparature);
 		Write_To_SPI_FLASH(temparature);
 		Send_To_Serial_Monitor(temparature);
-
 		HAL_Delay(60000);
 	}
 	return 0;
@@ -132,8 +131,16 @@ void Send_To_Serial_Monitor (float value)
  * @retval None
  */
 void Write_To_I2C_EEPROM(float value)
-{
+{	
+	int8_t data[2];
+	static int8_t word_address = 0;
 
+	/*Word Address*/
+	data[0] = word_address++;
+	/*Data*/
+	data[1] = (int8_t)value;
+
+	HAL_I2C_Master_Transmit(&hi2c1, (EEPROM_I2C_ADDRESS << 0), data, 1, 100 );
 }
 
 
