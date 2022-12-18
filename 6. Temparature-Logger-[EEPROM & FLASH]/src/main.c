@@ -133,14 +133,15 @@ void Send_To_Serial_Monitor (float value)
 void Write_To_I2C_EEPROM(float value)
 {	
 	int8_t data[2];
-	static int8_t word_address = 0;
+	static uint8_t word_address = 0;
 
 	/*Word Address*/
 	data[0] = word_address++;
 	/*Data*/
 	data[1] = (int8_t)value;
 
-	HAL_I2C_Master_Transmit(&hi2c1, (EEPROM_I2C_ADDRESS << 0), data, 1, 100 );
+	/*write data to EEPROM*/
+	HAL_I2C_Master_Transmit(&hi2c1, (EEPROM_I2C_ADDRESS << 0), data, 2, 100 );
 }
 
 
