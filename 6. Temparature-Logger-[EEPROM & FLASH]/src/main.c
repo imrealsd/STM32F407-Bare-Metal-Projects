@@ -30,6 +30,9 @@
 void SystemClock_Config(void);
 static float Get_Temparature(void);
 void Send_To_Serial_Monitor (float);
+void Write_To_I2C_EEPROM(float value);
+void Write_To_SPI_FLASH(float value);
+
 
 /*Global Variables*/
 float temparature =  0;
@@ -63,6 +66,7 @@ int main(void)
 		Send_To_Serial_Monitor(temparature);
 		HAL_Delay(60000);
 	}
+
 	return 0;
 }
 
@@ -141,7 +145,7 @@ void Send_To_Serial_Monitor (float value)
  */
 void Write_To_I2C_EEPROM(float value)
 {	
-	int8_t data[2];
+	uint8_t data[2];
 	static uint8_t word_address = 0;
 
 	/*Word Address*/
