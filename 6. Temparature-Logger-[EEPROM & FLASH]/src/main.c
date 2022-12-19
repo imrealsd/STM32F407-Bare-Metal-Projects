@@ -76,7 +76,8 @@ static float Get_Temparature(void)
 {
 	uint16_t raw_adc = HAL_ADC_GetValue(&hadc1);
 
-	/** thermistor range -24 to +80 degree C [diff 104]
+	/** 
+	 * thermistor range -24 to +80 degree C [diff 104]
      * ADC range 0 to 4096 [12 bit] [diff 4096]
      */
     float frac = (float)(104)/(float)(4096);
@@ -86,7 +87,7 @@ static float Get_Temparature(void)
 
     /** 
 	 * IF [temparature increae -> volt decrease]
-     *float temparature = 80 - (frac * (float)(4096))
+     * float temparature = 80 - (frac * (float)(4096))
 	 */
     return temparature;
 }
@@ -125,6 +126,14 @@ void Send_To_Serial_Monitor (float value)
 }
 
 
+/**
+ * MEMORY MAP OF K24C02 EEPROM
+ * WORD SIZE = 8 BIT OR 1 BYTE
+ * PAGE SIZE = 8 BYTE , MEANS 8 WORDS IN A SINGLE PAGE
+ * TOTAL PAGES = 32
+ * TOTAL EEPROM SIZE = 32 * 8 BYTE = 256 BYTE OR 2048 BITS
+ * WORD ADDRESS 0 TO 255
+*/
 
 /**
  * @brief  Writing temparature data to EEPROM 
