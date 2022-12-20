@@ -139,6 +139,7 @@ void Send_To_Serial_Monitor (float value)
 }
 
 
+
 /**
  * MEMORY MAP OF K24C02 EEPROM
  * WORD SIZE = 8 BIT OR 1 BYTE
