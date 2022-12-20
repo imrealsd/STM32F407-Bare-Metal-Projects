@@ -23,8 +23,8 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-#define BUFF_SIZE 8
-#define EEPROM_I2C_ADDRESS 0x50
+#define BUFF_SIZE 7
+#define EEPROM_I2C_ADDRESS 0x50         /* Making A0, A1 & A2 Ground*/
 
 /*Local Function Prototypes*/
 void SystemClock_Config(void);
@@ -59,14 +59,12 @@ int main(void)
 	 * Delay & Repeat after 60s
 	 */
 	while (1){
-
 		temparature = Get_Temparature();
-		Write_To_I2C_EEPROM(temparature);
-		Write_To_SPI_FLASH(temparature);
+		//Write_To_I2C_EEPROM(temparature);
+		//Write_To_SPI_FLASH(temparature);
 		Send_To_Serial_Monitor(temparature);
-		HAL_Delay(60000);
+		HAL_Delay(1000);
 	}
-
 	return 0;
 }
 
@@ -77,8 +75,21 @@ int main(void)
  * @retval float
  */
 static float Get_Temparature(void)
-{
-	uint16_t raw_adc = HAL_ADC_GetValue(&hadc1);
+{	
+	uint16_t raw_adc = 0;
+
+	/**
+	 * Read adc steps :
+	 * start adc
+	 * poll until conversation is done
+	 * read the value 
+	 */
+	HAL_ADC_Start(&hadc1);
+
+	if (HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK)
+		raw_adc = HAL_ADC_GetValue(&hadc1);
+
+	HAL_ADC_Stop(&hadc1);
 
 	/** 
 	 * thermistor range -24 to +80 degree C [diff 104]
@@ -106,8 +117,7 @@ void Send_To_Serial_Monitor (float value)
 	uint8_t tx_buff[BUFF_SIZE];
     value = value * 100;
 
-    /* Before point [3 digits] */
-    int8_t d5 = (((int)value) / 10000) % 10;
+    /* Before point [2 digits] */
     int8_t d4 = (((int)value) / 1000) % 10;
     int8_t d3 = (((int)value) / 100) % 10;
 
@@ -116,14 +126,13 @@ void Send_To_Serial_Monitor (float value)
     int8_t d1 = (int)value % 10;
 
 	/*load data into tx-buff*/
-	tx_buff[0] = d5 + 48;
-	tx_buff[1] = d4 + 48;
-	tx_buff[2] = d3 + 48;
-	tx_buff[3] = '.';
-	tx_buff[4] = d2 + 48;
-	tx_buff[5] = d1 + 48;
-	tx_buff[6] = 'C';
-	tx_buff[7] = '\n';
+	tx_buff[0] = d4 + 48;
+	tx_buff[1] = d3 + 48;
+	tx_buff[2] = '.';
+	tx_buff[3] = d2 + 48;
+	tx_buff[4] = d1 + 48;
+	tx_buff[5] = 'C';
+	tx_buff[6] = '\n';
 
 	/*send tx-buff to pc*/
 	HAL_UART_Transmit(&huart1, tx_buff, BUFF_SIZE, 100);
