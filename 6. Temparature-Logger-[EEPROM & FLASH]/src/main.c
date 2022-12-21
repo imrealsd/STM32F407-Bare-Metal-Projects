@@ -73,7 +73,7 @@ int main(void)
 			HAL_Delay(10);
 		}
 		/*
-		
+
 		for (int i = 0; i < 1; i++){
 			int8_t temp = Read_From_I2C_EEPROM();
 			Send_To_Serial_Monitor(temp);
@@ -208,7 +208,6 @@ uint8_t Read_From_I2C_EEPROM(void)
 
 	/*Read 1 byte from EEPROM*/
 	HAL_I2C_Master_Receive(&hi2c1, ((EEPROM_I2C_ADDRESS << 1) | 1), &data, 1, 100);
-
 	word_address++;
 	return data;
 }
