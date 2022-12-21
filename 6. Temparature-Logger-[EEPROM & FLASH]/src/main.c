@@ -23,6 +23,7 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include <string.h>
 #define BUFF_SIZE 7
 #define EEPROM_I2C_ADDRESS 0x50         /* Making A0, A1 & A2 Ground*/
 
@@ -53,6 +54,9 @@ int main(void)
 	MX_SPI1_Init();
 	MX_USART1_UART_Init();
 
+	uint8_t *msg1 = "Written-Values:\n";
+	uint8_t *msg2 = "Read-Values:\n";
+	
 	/**
 	 * Get temparature
 	 * Save to EEPROM & FLASH
@@ -62,25 +66,30 @@ int main(void)
 	while (1){
 
 		/**
-		 * write 8 values to EEPROM
-		 * Read those 8 values form EEPROM and send to serial monitor
+		 * write 256 values to EEPROM
+		 * Read those 256 values form EEPROM and send to serial monitor
 		 */
-		for (int i = 0; i < 8; i++){
+		HAL_UART_Transmit(&huart1, msg1, strlen(msg1), 100);
+		for (int i = 0; i < 256; i++){
 			temparature = Get_Temparature();
 			Write_To_I2C_EEPROM(temparature);
+			Send_To_Serial_Monitor(temparature);
 
 			/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
 			HAL_Delay(10);
 		}
-		/*
+		
+		HAL_Delay(100);
 
-		for (int i = 0; i < 1; i++){
+		HAL_UART_Transmit(&huart1, msg2, strlen(msg2), 100);
+		for (int i = 0; i < 256; i++){
 			int8_t temp = Read_From_I2C_EEPROM();
 			Send_To_Serial_Monitor(temp);
+			HAL_Delay(10);
 		}
 
+		/*
 		Write_To_SPI_FLASH(temparature);
-
 		*/
 		HAL_Delay(5000);
 	}
