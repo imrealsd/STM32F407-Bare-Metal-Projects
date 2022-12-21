@@ -32,6 +32,7 @@ static float Get_Temparature(void);
 void Send_To_Serial_Monitor (float);
 void Write_To_I2C_EEPROM(float value);
 void Write_To_SPI_FLASH(float value);
+uint8_t Read_From_I2C_EEPROM(void);
 
 
 /*Global Variables*/
@@ -59,15 +60,32 @@ int main(void)
 	 * Delay & Repeat after 60s
 	 */
 	while (1){
-		temparature = Get_Temparature();
-		//Write_To_I2C_EEPROM(temparature);
-		//Write_To_SPI_FLASH(temparature);
-		Send_To_Serial_Monitor(temparature);
-		HAL_Delay(1000);
+
+		/**
+		 * write 8 values to EEPROM
+		 * Read those 8 values form EEPROM and send to serial monitor
+		 */
+		for (int i = 0; i < 8; i++){
+			temparature = Get_Temparature();
+			Write_To_I2C_EEPROM(temparature);
+
+			/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
+			HAL_Delay(10);
+		}
+		/*
+		
+		for (int i = 0; i < 1; i++){
+			int8_t temp = Read_From_I2C_EEPROM();
+			Send_To_Serial_Monitor(temp);
+		}
+
+		Write_To_SPI_FLASH(temparature);
+
+		*/
+		HAL_Delay(5000);
 	}
 	return 0;
 }
-
 
 
 /**
@@ -83,6 +101,7 @@ static float Get_Temparature(void)
 	 * start adc
 	 * poll until conversation is done
 	 * read the value 
+	 * stop the adc
 	 */
 	HAL_ADC_Start(&hadc1);
 
@@ -159,14 +178,40 @@ void Write_To_I2C_EEPROM(float value)
 	static uint8_t word_address = 0;
 
 	/*Word Address*/
+	if (word_address == 255)
+		word_address = 0;
+
 	data[0] = word_address++;
+
 	/*Data*/
 	data[1] = (int8_t)value;
 
-	/*write data to EEPROM*/
-	HAL_I2C_Master_Transmit(&hi2c1, (EEPROM_I2C_ADDRESS << 0), data, 2, 100 );
+	/*write single byte data to EEPROM*/
+	HAL_I2C_Master_Transmit(&hi2c1, ((EEPROM_I2C_ADDRESS) << 1 | 0), data, 2, 100 );
 }
 
+/**
+ * @brief  reading temparature from EERPOM
+ * @retval uint8_t
+ */
+uint8_t Read_From_I2C_EEPROM(void)
+{
+	static uint8_t word_address = 0;
+	uint8_t data;
+
+	/*Word Address*/
+	if (word_address == 255)
+		word_address = 0;
+
+	/*write register address to EEPROM*/
+	HAL_I2C_Master_Transmit(&hi2c1, ((EEPROM_I2C_ADDRESS << 1) | 0), &word_address ,1, 100 );
+
+	/*Read 1 byte from EEPROM*/
+	HAL_I2C_Master_Receive(&hi2c1, ((EEPROM_I2C_ADDRESS << 1) | 1), &data, 1, 100);
+
+	word_address++;
+	return data;
+}
 
 
 /**
