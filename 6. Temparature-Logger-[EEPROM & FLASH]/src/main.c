@@ -232,6 +232,17 @@ void Write_To_SPI_FLASH(float value)
 }
 
 
+/**
+ * @brief  Transfering & Receiving 1 byte from flash
+ * @retval uint8_t
+ */
+uint8_t W25Q16_SPI(uint8_t tx_data)
+{
+	uint8_t rx_data;
+	HAL_SPI_TransmitReceive(&hspi1, &tx_data, &rx_data, 1, 100);
+	return rx_data;
+}
+
 
 /**
  * @brief System Clock Configuration
