@@ -223,6 +223,15 @@ uint8_t Read_From_I2C_EEPROM(void)
 
 
 /**
+ * MEMORY MAP OF  W25Q16 FLASH
+ * WORD SIZE = 8 BIT OR 1 BYTE
+ * PAGE SIZE = 256 BYTE , MEANS 256 WORDS IN A SINGLE PAGE
+ * TOTAL PAGES = 8192
+ * TOTAL EEPROM SIZE = 8192 * 256 BYTE = 2097152 BYTE
+ * WORD ADDRESS 0 TO 2097151
+*/
+
+/**
  * @brief  Writing temparature data to FLASH
  * @retval None
  */
