@@ -26,6 +26,7 @@
 #include <string.h>
 #define BUFF_SIZE 7
 #define EEPROM_I2C_ADDRESS 0x50         /* Making A0, A1 & A2 Ground*/
+#define DUMMY_BYTE 0xA5
 
 /*Local Function Prototypes*/
 void SystemClock_Config(void);
@@ -227,7 +228,7 @@ uint8_t Read_From_I2C_EEPROM(void)
  * WORD SIZE = 8 BIT OR 1 BYTE
  * PAGE SIZE = 256 BYTE , MEANS 256 WORDS IN A SINGLE PAGE
  * TOTAL PAGES = 8192
- * TOTAL EEPROM SIZE = 8192 * 256 BYTE = 2097152 BYTE
+ * TOTAL EEPROM SIZE = 8192 * 256 BYTE = 2097152 BYTE OR 2MB OR 16Mb
  * WORD ADDRESS 0 TO 2097151
 */
 
@@ -250,6 +251,51 @@ uint8_t W25Q16_SPI(uint8_t tx_data)
 	uint8_t rx_data;
 	HAL_SPI_TransmitReceive(&hspi1, &tx_data, &rx_data, 1, 100);
 	return rx_data;
+}
+
+/**
+ * @brief  write enable of flash
+ * @retval void
+ */
+void W25Q16_WriteEnable(void)
+{
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_SPI(0x06);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_Delay(1);
+}
+
+
+/**
+ * @brief  write disbale of flash
+ * @retval void
+ */
+void W25Q16_WriteDisable(void)
+{
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_SPI(0x04);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_Delay(1);
+}
+
+/**
+ * @brief  Read status register 1 or 2
+ * @retval uint8_t
+ */
+uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
+{	
+	uint8_t status = 0;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+
+	if (register_1_2 == 1){
+		W25Q16_SPI(0x05);
+		status = W25Q16_SPI(DUMMY_BYTE);
+
+	} else if (register_1_2 == 2) {
+		W25Q16_SPI(0x35);
+		status = W25Q16_SPI(DUMMY_BYTE);
+	}
+	return status;
 }
 
 
