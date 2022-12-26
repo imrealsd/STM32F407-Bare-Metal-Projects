@@ -278,6 +278,7 @@ void W25Q16_WriteDisable(void)
 	HAL_Delay(1);
 }
 
+
 /**
  * @brief  Read status register 1 or 2
  * @retval uint8_t
