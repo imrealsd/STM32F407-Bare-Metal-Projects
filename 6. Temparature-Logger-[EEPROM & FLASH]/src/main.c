@@ -273,6 +273,7 @@ uint8_t W25Q16_ReadByte(void)
 	W25Q16_SPI((WordAddress & 0xFF));
 	data = W25Q16_SPI(DUMMY_BYTE);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	
 	return data;
 }
 
