@@ -273,7 +273,7 @@ uint8_t W25Q16_ReadByte(void)
 	W25Q16_SPI((WordAddress & 0xFF));
 	data = W25Q16_SPI(DUMMY_BYTE);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-	
+
 	return data;
 }
 
@@ -340,7 +340,7 @@ uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
 
 /**
  * @brief  Wait for end of internal write cycle [busy flag = 0]
- * @retval uint8_t
+ * @retval none
  */
 void W25Q16_WaitForWriteEnd(void)
 {	
