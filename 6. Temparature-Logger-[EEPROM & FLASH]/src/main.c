@@ -30,12 +30,18 @@
 
 /*Local Function Prototypes*/
 void SystemClock_Config(void);
+uint8_t W25Q16_ReadByte(void);
+void W25Q16_WriteEnable(void);
+void W25Q16_WriteDisable(void);
+void W25Q16_WaitForWriteEnd(void);
+void W25Q16_WriteByte(float value);
+uint8_t Read_From_I2C_EEPROM(void);
 static float Get_Temparature(void);
 void Send_To_Serial_Monitor (float);
-void Write_To_I2C_EEPROM(float value);
+uint8_t W25Q16_SPI(uint8_t tx_data);
 void Write_To_SPI_FLASH(float value);
-uint8_t Read_From_I2C_EEPROM(void);
-
+void Write_To_I2C_EEPROM(float value);
+uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2);
 
 /*Global Variables*/
 float temparature =  0;
@@ -236,14 +242,43 @@ uint8_t Read_From_I2C_EEPROM(void)
  * @brief  Writing temparature data to FLASH
  * @retval None
  */
-void Write_To_SPI_FLASH(float value)
+void W25Q16_WriteByte(float value)
 {
+	static int WordAddress = 0;
+	uint8_t data = (uint8_t)value;
 
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_SPI(0x02);
+	W25Q16_SPI((WordAddress & 0xFF0000) >> 16);
+	W25Q16_SPI((WordAddress & 0xFF00) >>  8);
+	W25Q16_SPI((WordAddress & 0xFF));
+	W25Q16_SPI(data);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	W25Q16_WaitForWriteEnd();
+}
+
+/**
+ * @brief  Reading temparature data from FLASH
+ * @retval uint8_t
+ */
+uint8_t W25Q16_ReadByte(void)
+{
+	static int WordAddress = 0;
+	uint8_t data = 0;
+
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_SPI(0x03);
+	W25Q16_SPI((WordAddress & 0xFF0000) >> 16);
+	W25Q16_SPI((WordAddress & 0xFF00) >>  8);
+	W25Q16_SPI((WordAddress & 0xFF));
+	data = W25Q16_SPI(DUMMY_BYTE);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	return data;
 }
 
 
 /**
- * @brief  Transfering & Receiving 1 byte from flash
+ * @brief  Transfering & Receiving 1 byte from flash [base function]
  * @retval uint8_t
  */
 uint8_t W25Q16_SPI(uint8_t tx_data)
@@ -292,11 +327,27 @@ uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
 		W25Q16_SPI(0x05);
 		status = W25Q16_SPI(DUMMY_BYTE);
 
-	} else if (register_1_2 == 2) {
+	} else if (register_1_2 == 2){
 		W25Q16_SPI(0x35);
 		status = W25Q16_SPI(DUMMY_BYTE);
 	}
+
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
 	return status;
+}
+
+
+/**
+ * @brief  Wait for end of internal write cycle [busy flag = 0]
+ * @retval uint8_t
+ */
+void W25Q16_WaitForWriteEnd(void)
+{	
+	uint8_t status = 0;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_SPI(0x05);
+	while (((status = W25Q16_SPI(DUMMY_BYTE)) & 0x01) == 0x01);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
 }
 
 
