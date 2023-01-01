@@ -76,28 +76,32 @@ int main(void)
 		 * write 256 values to EEPROM
 		 * Read those 256 values form EEPROM and send to serial monitor
 		 */
-		HAL_UART_Transmit(&huart1, msg1, strlen(msg1), 100);
-		for (int i = 0; i < 256; i++){
-			temparature = Get_Temparature();
-			Write_To_I2C_EEPROM(temparature);
-			Send_To_Serial_Monitor(temparature);
-
-			/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
-			HAL_Delay(10);
-		}
+		// HAL_UART_Transmit(&huart1, msg1, strlen(msg1), 100);
+		// for (int i = 0; i < 256; i++){
+		// 	temparature = Get_Temparature();
+		// 	Write_To_I2C_EEPROM(temparature);
+		// 	Send_To_Serial_Monitor(temparature);
+		// 	/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
+		// 	HAL_Delay(10);
+		// }
 		
-		HAL_Delay(100);
+		// HAL_Delay(100);
 
-		HAL_UART_Transmit(&huart1, msg2, strlen(msg2), 100);
-		for (int i = 0; i < 256; i++){
-			int8_t temp = Read_From_I2C_EEPROM();
-			Send_To_Serial_Monitor(temp);
-			HAL_Delay(10);
-		}
+		// HAL_UART_Transmit(&huart1, msg2, strlen(msg2), 100);
+		// for (int i = 0; i < 256; i++){
+		// 	int8_t temp = Read_From_I2C_EEPROM();
+		// 	Send_To_Serial_Monitor(temp);
+		// 	HAL_Delay(10);
+		// }
 
 		/*
 		Write_To_SPI_FLASH(temparature);
 		*/
+		for (int i = 0; i < 5; i++){
+			temparature = Get_Temparature();
+			W25Q16_WriteByte(temparature);
+			Send_To_Serial_Monitor(temparature);
+		}
 		HAL_Delay(5000);
 	}
 	return 0;
@@ -245,16 +249,22 @@ uint8_t Read_From_I2C_EEPROM(void)
 void W25Q16_WriteByte(float value)
 {
 	static int WordAddress = 0;
-	uint8_t data = (uint8_t)value;
+	uint8_t data = (uint8_t)value, statusReg1;
 
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_WriteEnable();
+	statusReg1 = W25Q16_ReadStatusRegister(1);
+	while ((statusReg1 & 0x02) != 0x02)
+		statusReg1 = W25Q16_ReadStatusRegister(1);
+
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x02);
 	W25Q16_SPI((WordAddress & 0xFF0000) >> 16);
 	W25Q16_SPI((WordAddress & 0xFF00) >>  8);
 	W25Q16_SPI((WordAddress & 0xFF));
 	W25Q16_SPI(data);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 	W25Q16_WaitForWriteEnd();
+	WordAddress++;
 }
 
 /**
@@ -264,16 +274,20 @@ void W25Q16_WriteByte(float value)
 uint8_t W25Q16_ReadByte(void)
 {
 	static int WordAddress = 0;
-	uint8_t data = 0;
+	uint8_t data = 0, statusReg1;
 
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	W25Q16_WriteEnable();
+	statusReg1 = W25Q16_ReadStatusRegister(1);
+	while ((statusReg1 & 0x01) != 0x01);
+
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x03);
 	W25Q16_SPI((WordAddress & 0xFF0000) >> 16);
 	W25Q16_SPI((WordAddress & 0xFF00) >>  8);
 	W25Q16_SPI((WordAddress & 0xFF));
 	data = W25Q16_SPI(DUMMY_BYTE);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+	WordAddress++;
 	return data;
 }
 
@@ -295,9 +309,9 @@ uint8_t W25Q16_SPI(uint8_t tx_data)
  */
 void W25Q16_WriteEnable(void)
 {
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x06);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 	HAL_Delay(1);
 }
 
@@ -308,9 +322,9 @@ void W25Q16_WriteEnable(void)
  */
 void W25Q16_WriteDisable(void)
 {
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x04);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 	HAL_Delay(1);
 }
 
@@ -322,7 +336,7 @@ void W25Q16_WriteDisable(void)
 uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
 {	
 	uint8_t status = 0;
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 
 	if (register_1_2 == 1){
 		W25Q16_SPI(0x05);
@@ -333,7 +347,7 @@ uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
 		status = W25Q16_SPI(DUMMY_BYTE);
 	}
 
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 	return status;
 }
 
@@ -345,10 +359,14 @@ uint8_t W25Q16_ReadStatusRegister(uint8_t register_1_2)
 void W25Q16_WaitForWriteEnd(void)
 {	
 	uint8_t status = 0;
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x05);
-	while (((status = W25Q16_SPI(DUMMY_BYTE)) & 0x01) == 0x01);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+	do {
+		status = W25Q16_SPI(DUMMY_BYTE);
+		
+	} while ((status & 0x01) == 0x01);
+
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 }
 
 
