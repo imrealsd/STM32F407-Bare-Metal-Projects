@@ -29,6 +29,7 @@
 #define DUMMY_BYTE 0xA5
 
 /*Local Function Prototypes*/
+void W25Q16_chipErase(void);
 void SystemClock_Config(void);
 uint8_t W25Q16_ReadByte(void);
 void W25Q16_WriteEnable(void);
@@ -60,6 +61,7 @@ int main(void)
 	MX_I2C1_Init();
 	MX_SPI1_Init();
 	MX_USART1_UART_Init();
+	W25Q16_chipErase();
 
 	uint8_t *msg1 = "Written-Values:\n";
 	uint8_t *msg2 = "Read-Values:\n";
@@ -76,32 +78,37 @@ int main(void)
 		 * write 256 values to EEPROM
 		 * Read those 256 values form EEPROM and send to serial monitor
 		 */
-		// HAL_UART_Transmit(&huart1, msg1, strlen(msg1), 100);
-		// for (int i = 0; i < 256; i++){
-		// 	temparature = Get_Temparature();
-		// 	Write_To_I2C_EEPROM(temparature);
-		// 	Send_To_Serial_Monitor(temparature);
-		// 	/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
-		// 	HAL_Delay(10);
-		// }
+		HAL_UART_Transmit(&huart1, msg1, strlen(msg1), 100);
+		for (int i = 0; i < 256; i++){
+			temparature = Get_Temparature();
+			Write_To_I2C_EEPROM(temparature);
+			Send_To_Serial_Monitor(temparature);
+			/* 5ms delay is needed to complete EEPROM internal write cycle [10ms for safety]*/
+			HAL_Delay(10);
+		}
 		
-		// HAL_Delay(100);
+		HAL_Delay(100);
 
-		// HAL_UART_Transmit(&huart1, msg2, strlen(msg2), 100);
-		// for (int i = 0; i < 256; i++){
-		// 	int8_t temp = Read_From_I2C_EEPROM();
-		// 	Send_To_Serial_Monitor(temp);
-		// 	HAL_Delay(10);
-		// }
+		HAL_UART_Transmit(&huart1, msg2, strlen(msg2), 100);
+		for (int i = 0; i < 256; i++){
+			int8_t temp = Read_From_I2C_EEPROM();
+			Send_To_Serial_Monitor(temp);
+			HAL_Delay(10);
+		}
 
-		/*
-		Write_To_SPI_FLASH(temparature);
+		/**
+		 * Write & Read  SPI Flash
 		*/
 		for (int i = 0; i < 5; i++){
 			temparature = Get_Temparature();
 			W25Q16_WriteByte(temparature);
 			Send_To_Serial_Monitor(temparature);
+
+			int8_t temp = W25Q16_ReadByte();
+			Send_To_Serial_Monitor(temp);
+			HAL_Delay(1000);
 		}
+
 		HAL_Delay(5000);
 	}
 	return 0;
@@ -278,7 +285,8 @@ uint8_t W25Q16_ReadByte(void)
 
 	W25Q16_WriteEnable();
 	statusReg1 = W25Q16_ReadStatusRegister(1);
-	while ((statusReg1 & 0x01) != 0x01);
+	while ((statusReg1 & 0x02) != 0x02)
+		statusReg1 = W25Q16_ReadStatusRegister(1);
 
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
 	W25Q16_SPI(0x03);
@@ -302,6 +310,19 @@ uint8_t W25Q16_SPI(uint8_t tx_data)
 	HAL_SPI_TransmitReceive(&hspi1, &tx_data, &rx_data, 1, 100);
 	return rx_data;
 }
+
+/**
+ * @brief  Full chip erase
+ * @retval none
+ */
+void W25Q16_chipErase(void)
+{
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+	W25Q16_SPI(0x60);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+	HAL_Delay(1);
+}
+
 
 /**
  * @brief  write enable of flash
